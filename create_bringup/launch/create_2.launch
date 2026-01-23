@@ -2,10 +2,12 @@
 <launch>
   <arg name="config" default="$(find-pkg-share create_bringup)/config/default.yaml" />
   <arg name="desc" default="true" />
+  <arg name="dev" default="/dev/ttyUSB0" />
 
   <node name="create_driver" pkg="create_driver" exec="create_driver" output="screen">
     <param from="$(var config)" />
     <param name="robot_model" value="CREATE_2" />
+    <param name="dev" value="$(var dev)" />
   </node>
 
   <!-- Robot description -->
