@@ -3,11 +3,15 @@
   <arg name="config" default="$(find-pkg-share create_bringup)/config/default.yaml" />
   <arg name="desc" default="true" />
   <arg name="dev" default="/dev/ttyUSB0" />
+  <arg name="publish_tf" default="true" />
+  <arg name="latch_cmd_duration" default="0.2" />
 
   <node name="create_driver" pkg="create_driver" exec="create_driver" output="screen">
     <param from="$(var config)" />
     <param name="robot_model" value="CREATE_2" />
     <param name="dev" value="$(var dev)" />
+    <param name="publish_tf" value="$(var publish_tf)" />
+    <param name="latch_cmd_duration" value="$(var latch_cmd_duration)" />
   </node>
 
   <!-- Robot description -->
