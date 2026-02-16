@@ -20,3 +20,6 @@ create_driver:
 
     # Whether to publish the transform between odom_frame and base_frame
     publish_tf: true
+
+    # Start in passive mode instead of full mode (useful when robot is docked)
+    start_in_passive_mode: false

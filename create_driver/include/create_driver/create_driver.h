@@ -132,6 +132,7 @@ private:
   bool publish_tf_;
   int baud_;
   bool oi_mode_workaround_;
+  bool start_in_passive_mode_;
 
   void cmdVelCallback(geometry_msgs::msg::Twist::UniquePtr msg);
   void debrisLEDCallback(std_msgs::msg::Bool::UniquePtr msg);

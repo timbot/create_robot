@@ -50,6 +50,7 @@ CreateDriver::CreateDriver()
   loop_hz_ = declare_parameter<double>("loop_hz", 10.0);
   publish_tf_ = declare_parameter<bool>("publish_tf", true);
   oi_mode_workaround_ = declare_parameter<bool>("oi_mode_workaround", false);
+  start_in_passive_mode_ = declare_parameter<bool>("start_in_passive_mode", false);
 
   auto robot_model_name = declare_parameter<std::string>("robot_model", "CREATE_2");
   if (robot_model_name == "ROOMBA_400") {
@@ -82,8 +83,8 @@ CreateDriver::CreateDriver()
 
   RCLCPP_INFO(this->get_logger(), "[CREATE] Connection established.");
 
-  // Start in full control mode
-  robot_->setMode(create::MODE_FULL);
+  // Start in passive or full control mode
+  robot_->setMode(start_in_passive_mode_ ? create::MODE_PASSIVE : create::MODE_FULL);
 
   // Show robot's battery level
   RCLCPP_INFO(
