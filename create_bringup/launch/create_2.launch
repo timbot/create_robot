@@ -6,6 +6,7 @@
   <arg name="publish_tf" default="true" />
   <arg name="latch_cmd_duration" default="0.2" />
   <arg name="start_in_passive_mode" default="false" />
+  <arg name="wakeup_pin" default="-1" />
 
   <node name="create_driver" pkg="create_driver" exec="create_driver" output="screen">
     <param from="$(var config)" />
@@ -14,6 +15,7 @@
     <param name="publish_tf" value="$(var publish_tf)" />
     <param name="latch_cmd_duration" value="$(var latch_cmd_duration)" />
     <param name="start_in_passive_mode" value="$(var start_in_passive_mode)" />
+    <param name="wakeup_pin" value="$(var wakeup_pin)" />
   </node>
 
   <!-- Robot description -->

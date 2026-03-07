@@ -28,7 +28,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef CREATE_DRIVER__CREATE_DRIVER_H_
 #define CREATE_DRIVER__CREATE_DRIVER_H_
+#include <atomic>
 #include <string>
+#include <thread>
 
 #include "create_msgs/msg/charging_state.hpp"
 #include "create_msgs/msg/mode.hpp"
@@ -123,6 +125,12 @@ private:
   sensor_msgs::msg::JointState joint_state_msg_;
   bool is_running_slowly_;
 
+  // Wakeup pin (GPIO via lgpio)
+  int wakeup_pin_;
+  int gpio_handle_;
+  std::thread wakeup_thread_;
+  std::atomic<bool> wakeup_running_{false};
+
   // ROS params
   std::string dev_;
   std::string base_frame_;
@@ -164,6 +172,10 @@ private:
   void publishBumperInfo();
   void publishWheeldrop();
   void publishCliff();
+  void initWakeupPin();
+  void pulseWakeupPin();
+  void cleanupWakeupPin();
+  void wakeupLoop();
 
 public:
   CreateDriver();

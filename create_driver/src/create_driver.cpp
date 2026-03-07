@@ -31,6 +31,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <chrono>
 #include <memory>
 #include <string>
+#include <thread>
+
+#include <lgpio.h>
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
@@ -68,6 +71,14 @@ CreateDriver::CreateDriver()
   RCLCPP_INFO_STREAM(get_logger(), "[CREATE] \"" << robot_model_name << "\" selected");
 
   baud_ = declare_parameter<int>("baud", model_.getBaud());
+  wakeup_pin_ = declare_parameter<int>("wakeup_pin", -1);
+
+  // Pulse wakeup pin before opening serial connection
+  if (wakeup_pin_ >= 0) {
+    initWakeupPin();
+    RCLCPP_INFO(get_logger(), "[CREATE] Sending wakeup pulse on GPIO %d", wakeup_pin_);
+    pulseWakeupPin();
+  }
 
   // Disable signal handler; let rclcpp handle them
   robot_ = new create::Create(model_, false);
@@ -82,6 +93,12 @@ CreateDriver::CreateDriver()
   }
 
   RCLCPP_INFO(this->get_logger(), "[CREATE] Connection established.");
+
+  // Start periodic wakeup pulse thread
+  if (wakeup_pin_ >= 0) {
+    wakeup_running_ = true;
+    wakeup_thread_ = std::thread(&CreateDriver::wakeupLoop, this);
+  }
 
   // Start in passive or full control mode
   robot_->setMode(start_in_passive_mode_ ? create::MODE_PASSIVE : create::MODE_FULL);
@@ -186,6 +203,11 @@ CreateDriver::CreateDriver()
 CreateDriver::~CreateDriver()
 {
   RCLCPP_INFO(get_logger(), "[CREATE] Destruct sequence initiated.");
+  wakeup_running_ = false;
+  if (wakeup_thread_.joinable()) {
+    wakeup_thread_.join();
+  }
+  cleanupWakeupPin();
   robot_->disconnect();
   delete robot_;
 }
@@ -306,6 +328,56 @@ void CreateDriver::vacuumBrushMotor(create_msgs::msg::MotorSetpoint::UniquePtr m
 {
   if (!robot_->setVacuumMotor(msg->duty_cycle)) {
     RCLCPP_ERROR_STREAM(get_logger(), "[CREATE] Failed to set duty cycle " << msg->duty_cycle << " for vacuum motor");
+  }
+}
+
+void CreateDriver::initWakeupPin()
+{
+  gpio_handle_ = lgGpiochipOpen(0);
+  if (gpio_handle_ < 0) {
+    RCLCPP_ERROR(get_logger(), "[CREATE] Failed to open gpiochip0: %s", lguErrorText(gpio_handle_));
+    wakeup_pin_ = -1;
+    return;
+  }
+
+  int rc = lgGpioClaimOutput(gpio_handle_, 0, wakeup_pin_, 0);
+  if (rc < 0) {
+    RCLCPP_ERROR(get_logger(), "[CREATE] Failed to claim GPIO %d as output: %s",
+      wakeup_pin_, lguErrorText(rc));
+    lgGpiochipClose(gpio_handle_);
+    wakeup_pin_ = -1;
+    return;
+  }
+}
+
+void CreateDriver::pulseWakeupPin()
+{
+  lgGpioWrite(gpio_handle_, wakeup_pin_, 1);
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  lgGpioWrite(gpio_handle_, wakeup_pin_, 0);
+}
+
+void CreateDriver::cleanupWakeupPin()
+{
+  if (wakeup_pin_ < 0) {
+    return;
+  }
+  lgGpioWrite(gpio_handle_, wakeup_pin_, 0);
+  lgGpioFree(gpio_handle_, wakeup_pin_);
+  lgGpiochipClose(gpio_handle_);
+}
+
+void CreateDriver::wakeupLoop()
+{
+  while (wakeup_running_) {
+    // Sleep in 1-second increments so we can exit promptly on shutdown
+    for (int i = 0; i < 120 && wakeup_running_; ++i) {
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    if (wakeup_running_) {
+      RCLCPP_INFO(get_logger(), "[CREATE] Sending wakeup pulse on GPIO %d", wakeup_pin_);
+      pulseWakeupPin();
+    }
   }
 }
 

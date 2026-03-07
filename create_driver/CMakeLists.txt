@@ -38,6 +38,7 @@ ament_target_dependencies(${PROJECT_NAME}
   tf2_geometry_msgs
   tf2_ros
 )
+target_link_libraries(${PROJECT_NAME} lgpio)
 
 if(BUILD_TESTING)
   # Skip copyright lint and uncrustify
